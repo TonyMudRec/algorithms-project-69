@@ -1,9 +1,6 @@
 package hexlet.code;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.LinkedList;
+import java.util.*;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -16,7 +13,30 @@ public class SearchEngine {
         if (docs.isEmpty()) {
             return new ArrayList<>();
         }
-        var relevanceList = getRelevanceList(BASIC_TEXT_CAPACITY);
+
+        return getRelevanceList(docs, pattern, BASIC_TEXT_CAPACITY);
+    }
+
+    public static List<String> buildResult(List<LinkedList<String>> list) {
+        LinkedList<String> result = new LinkedList<>();
+        for (var docNames : list) {
+            for (var doc : docNames) {
+                result.addFirst(doc);
+            }
+        }
+        return result;
+    }
+
+    public static double getTFIDF(List<Map<String, String>> docs, String word) {
+        int termCount = getIndex(docs).get(word).size();
+        return Math.log(1 + (docs.size() - termCount + 1) / (termCount + 0.5));
+    }
+
+    public static List<String> getRelevanceList(List<Map<String, String>> docs, String pattern, int size) {
+        List<LinkedList<String>> list = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            list.add(new LinkedList<>());
+        }
 
         var relevanceCounter = 0;
 
@@ -34,36 +54,32 @@ public class SearchEngine {
                 }
             }
             if (relevanceCounter > 0) {
-                relevanceList.get(relevanceCounter).add(doc.get("id"));
+                list.get(relevanceCounter).add(doc.get("id"));
                 relevanceCounter = 0;
             }
         }
-        return buildResult(relevanceList);
-    }
-
-    public static List<String> buildResult(List<LinkedList<String>> list) {
-        LinkedList<String> result = new LinkedList<>();
-        for (var docNames : list) {
-            for (var doc : docNames) {
-                result.addFirst(doc);
-            }
-        }
-        return result;
-    }
-
-    public static List<LinkedList<String>> getRelevanceList(int size) {
-        List<LinkedList<String>> list = new ArrayList<>();
-        for (int i = 0; i < size; i++) {
-            list.add(new LinkedList<>());
-        }
-        return list;
+        return buildResult(list);
     }
 
     public static String wordConvert(String word) {
-        return Pattern.compile("\\w+")
+        return Pattern.compile("[\\w']+")
                 .matcher(word)
                 .results()
                 .map(MatchResult::group)
                 .collect(Collectors.joining());
+    }
+
+    public static Map<String, List<String>> getIndex(List<Map<String, String>> docs) {
+        Map<String, List<String>> result = new HashMap<>();
+        for (Map<String, String> doc : docs) {
+            if (doc.isEmpty()) {
+                continue;
+            }
+            var words = doc.get("text").split(" ");
+            for (var word : words) {
+                result.put(wordConvert(word), getRelevanceList(docs, wordConvert(word), BASIC_TEXT_CAPACITY));
+            }
+        }
+        return result;
     }
 }
