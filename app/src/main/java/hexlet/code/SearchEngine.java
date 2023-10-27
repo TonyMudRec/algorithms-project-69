@@ -48,8 +48,7 @@ public class SearchEngine {
         if (termCount == 0) {
             return 0;
         }
-        var result = Math.log10((double) docs.size() / termCount);
-        return result;
+        return Math.log10(1 + (docs.size() - termCount + 1) / (termCount + 0.5));
     }
 
     public static double getTFIDF(double TF, double IDF) {
