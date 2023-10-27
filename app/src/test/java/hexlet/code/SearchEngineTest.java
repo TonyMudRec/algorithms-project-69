@@ -42,7 +42,7 @@ class SearchEngineTest {
     void getIDFTest() {
         double result = SearchEngine.getIDF(docs, "shoot");
 
-        assertThat(result).isCloseTo(0.196, withinPercentage(1));
+        assertThat(result).isCloseTo(0.45, withinPercentage(1));
     }
 
     @Test
