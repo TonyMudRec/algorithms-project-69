@@ -25,7 +25,7 @@ public class SearchEngine {
         var words = doc.get("text").split(" ");
         for (var word : words) {
             word = wordConvert(word);
-            if (word.equals(wordConvert(searchTarget))) {
+            if (word.equalsIgnoreCase(wordConvert(searchTarget))) {
                 wordInDocCount++;
             }
         }
@@ -39,13 +39,17 @@ public class SearchEngine {
             var words = doc.get("text").split(" ");
             for (var word : words) {
                 word = wordConvert(word);
-                if (word.equals(wordConvert(searchTarget))) {
+                if (word.equalsIgnoreCase(wordConvert(searchTarget))) {
                     termCount++;
                     break;
                 }
             }
         }
-        return Math.log(1 + (docs.size() - termCount + 1) / (termCount + 0.5));
+        if (termCount == 0) {
+            return 0;
+        }
+        var result = Math.log10((double) docs.size() / termCount);
+        return result;
     }
 
     public static double getTFIDF(double TF, double IDF) {
@@ -62,7 +66,7 @@ public class SearchEngine {
                 word = wordConvert(word);
                 var partsOfTarget = searchTarget.split(" ");
                 for (var part : partsOfTarget) {
-                    if (word.equals(part)) {
+                    if (word.equalsIgnoreCase(part)) {
                         sumOfRelevance += getTFIDF(getTF(doc, word), getIDF(docs, word));
                     }
                 }
