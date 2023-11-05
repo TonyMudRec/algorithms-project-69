@@ -7,77 +7,48 @@ import java.util.stream.Collectors;
 
 public class SearchEngine {
 
-    private static Map<String, List<String>> indexMap = new HashMap<>();
+    private static Map<String, List<String>> indexMap;
 
-    public static List<String> search(List<Map<String, String>> docs, String searchTarget) {
+    private static HashSet<String> allWords;
+
+    public static List<String> search(List<Map<String, String>> docs, String target) {
         if (docs.isEmpty()) {
             return new ArrayList<>();
         }
-        var partsOfTarget = searchTarget.split(" ");
-        if (partsOfTarget.length > 1) {
-            return getRelevanceListForWord(docs, searchTarget);
-        }
-        return getIndexMap(docs).get(searchTarget);
+
+        return getResultOfSearch(docs, target);
     }
 
-    public static double getTF(Map<String, String> doc, String searchTarget) {
-        var wordInDocCount = 0;
-        var words = doc.get("text").split(" ");
-        for (var word : words) {
-            word = wordConvert(word);
-            if (word.equalsIgnoreCase(wordConvert(searchTarget))) {
-                wordInDocCount++;
-            }
-        }
 
-        return (double) wordInDocCount / words.length;
+    public static double getTFIDF(int allDocs, int termCount, double tf) {
+        var idf = Math.log(1 + (allDocs - termCount + 1) / (termCount + 0.5));
+        return idf * tf;
     }
 
-    public static double getIDF(List<Map<String, String>> docs, String searchTarget) {
-        var termCount = 0;
-        for (var doc : docs) {
-            var words = doc.get("text").split(" ");
-            for (var word : words) {
-                word = wordConvert(word);
-                if (word.equalsIgnoreCase(wordConvert(searchTarget))) {
-                    termCount++;
-                    break;
+    public static List<String> getResultOfSearch(List<Map<String, String>> docs, String target) {
+        var partsOfTarget = target.trim().split(" ");
+
+        if (partsOfTarget.length == 1) {
+            return getIndexMap(docs).get(target);
+        }
+        List<String> result = new ArrayList<>();
+
+
+        for (var docName : getIndexMap(docs).get(partsOfTarget[0])) {
+            var matchCounter = 0;
+            var sizeOfTargets = partsOfTarget.length;
+            for (String targetPart : partsOfTarget) {
+                if (getIndexMap(docs).get(targetPart).contains(docName)) {
+                    matchCounter++;
                 }
             }
-        }
-        if (termCount == 0) {
-            return 0;
-        }
-        return Math.log(1 + (docs.size() - termCount + 1) / (termCount + 0.5));
-    }
-
-    public static double getTFIDF(double TF, double IDF) {
-        return TF * IDF;
-    }
-
-    public static List<String> getRelevanceListForWord(List<Map<String, String>> docs, String searchTarget) {
-
-        TreeMap<Double, String> relevanceMap = new TreeMap<>();
-        for (Map<String, String> doc : docs) {
-            var words = doc.get("text").split(" ");
-            var sumOfRelevance = 0.0;
-            for (var word : words) {
-                word = wordConvert(word);
-                var partsOfTarget = searchTarget.split(" ");
-                for (var part : partsOfTarget) {
-                    if (word.equalsIgnoreCase(part)) {
-                        sumOfRelevance += getTFIDF(getTF(doc, word), getIDF(docs, word));
-                    }
-                }
-            }
-            if (sumOfRelevance > 0) {
-                relevanceMap.put(sumOfRelevance, doc.get("id"));
+            if (matchCounter == sizeOfTargets) {
+                result.add(docName);
             }
         }
-        List<String> result = new ArrayList<>(relevanceMap.values().stream().toList());
-        Collections.reverse(result);
         return result;
     }
+
 
     public static String wordConvert(String word) {
         return Pattern.compile("[\\w']+")
@@ -87,24 +58,74 @@ public class SearchEngine {
                 .collect(Collectors.joining());
     }
 
+    public static List<HashMap<String, Double>> getTFList(List<Map<String, String>> docs) {
+        allWords = new HashSet<>();
+        List<HashMap<String, Double>> result = new ArrayList<>();
+        for (var doc : docs) {
+            var words = doc.get("text").trim().split(" ");
+            HashMap<String, Double> tmpMap = new HashMap<>();
+            var size = words.length;
+            for (var word : words) {
+                word = wordConvert(word);
+                allWords.add(word);
+                if (!tmpMap.containsKey(word)) {
+                    tmpMap.put(word, 1.0);
+                } else {
+                    var count = tmpMap.get(word);
+                    tmpMap.put(word, ++count);
+                }
+            }
+            for (Map.Entry<String, Double> entry : tmpMap.entrySet()) {
+                entry.setValue(entry.getValue() / size);
+            }
+            result.add(tmpMap);
+        }
+        return result;
+    }
+
+    public static List<String> getListOfRelevance(String word, List<HashMap<String, Double>> listOfUsages, List<Map<String, String>> docs) {
+        List<String> result = new ArrayList<>();
+        var allDocsSize = docs.size();
+        for (int i = 0; i < allDocsSize; i++) {
+            var usagesMap = listOfUsages.get(i);
+            var docName = docs.get(i).get("id");
+            if (usagesMap.containsKey(word)) {
+                result.add(docName);
+            }
+        }
+
+        var resultSize = result.size();
+        if (resultSize < 2) {
+            return result;
+        }
+
+        NavigableMap<Double, String> treemap = new TreeMap<>(Collections.reverseOrder());
+
+        for (int i = 0; i < allDocsSize; i++) {
+            var docName = docs.get(i).get("id");
+            if (result.contains(docName)) {
+                var tfidf = getTFIDF(allDocsSize, resultSize, listOfUsages.get(i).getOrDefault(word, 0.0));
+                treemap.put(tfidf, docName);
+            }
+        }
+        result.clear();
+        result.addAll(treemap.values());
+        return result;
+    }
+
     public static Map<String, List<String>> getIndexMap(List<Map<String, String>> docs) {
-        if (!indexMap.isEmpty()) {
+        if (indexMap != null) {
             return indexMap;
         }
 
+        var tfList = getTFList(docs);
         Map<String, List<String>> result = new HashMap<>();
-
-        for (Map<String, String> doc : docs) {
-            if (doc.isEmpty()) {
-                continue;
-            }
-            var words = doc.get("text").split(" ");
-            for (var word : words) {
-                word = wordConvert(word);
-                result.put(word, getRelevanceListForWord(docs, word));
-            }
+        for (var word : allWords) {
+            var relevance = getListOfRelevance(word, tfList, docs);
+            result.put(word, relevance);
         }
+
         indexMap = result;
-        return result;
+        return indexMap;
     }
 }
