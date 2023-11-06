@@ -36,7 +36,7 @@ public class SearchEngine {
 
         for (var targetPart : partsOfTarget) {
             var tmp = getIndexMap(docs).get(targetPart);
-            if (!tmp.isEmpty()) {
+            if (tmp != null && !tmp.isEmpty()) {
                 listOfResults.add(tmp);
             }
         }
