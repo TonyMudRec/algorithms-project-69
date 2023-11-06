@@ -41,7 +41,7 @@ public class SearchEngine {
             }
         }
 
-        return getResultList(listOfResults);
+        return listOfResults.isEmpty() ? null : getResultList(listOfResults);
     }
 
     private static List<String> getResultList(LinkedList<List<String>> listOfResults) {
@@ -62,6 +62,7 @@ public class SearchEngine {
             for (var partOfResult : listOfResults) {
                 if (!partOfResult.contains(docName)) {
                     isContains = false;
+                    break;
                 }
             }
             if (isContains) {
