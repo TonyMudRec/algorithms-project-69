@@ -12,8 +12,8 @@ public class SearchEngine {
     private static HashSet<String> allWords;
 
     public static List<String> search(List<Map<String, String>> docs, String target) {
-        if (docs == null || docs.isEmpty() || target == null) {
-            return new ArrayList<>();
+        if (docs == null || docs.isEmpty() || target == null || target.isEmpty()) {
+            return null;
         }
 
         return getResultOfSearch(docs, target);
@@ -31,21 +31,44 @@ public class SearchEngine {
         if (partsOfTarget.length == 1) {
             return getIndexMap(docs).get(target);
         }
+
+        LinkedList<List<String>> listOfResults = new LinkedList<>();
+
+        for (var targetPart : partsOfTarget) {
+            var tmp = getIndexMap(docs).get(targetPart);
+            if (!tmp.isEmpty()) {
+                listOfResults.add(tmp);
+            }
+        }
+
+        return getResultList(listOfResults);
+    }
+
+    private static List<String> getResultList(LinkedList<List<String>> listOfResults) {
+        var maxListSize = 0;
+        var biggestListIndex = 0;
+        for (int i = 0; i < listOfResults.size(); i++) {
+            var partOfResult = listOfResults.get(i);
+            if (maxListSize < partOfResult.size()) {
+                biggestListIndex = i;
+                maxListSize = partOfResult.size();
+            }
+        }
+
         List<String> result = new ArrayList<>();
-
-
-        for (var docName : getIndexMap(docs).get(partsOfTarget[0])) {
-            var matchCounter = 0;
-            var sizeOfTargets = partsOfTarget.length;
-            for (String targetPart : partsOfTarget) {
-                if (getIndexMap(docs).get(targetPart).contains(docName)) {
-                    matchCounter++;
+        LinkedList<String> tmp = new LinkedList<>(listOfResults.get(biggestListIndex));
+        for (var docName : tmp) {
+            var isContains = true;
+            for (var partOfResult : listOfResults) {
+                if (!partOfResult.contains(docName)) {
+                    isContains = false;
                 }
             }
-            if (matchCounter == sizeOfTargets) {
+            if (isContains) {
                 result.add(docName);
             }
         }
+
         return result;
     }
 

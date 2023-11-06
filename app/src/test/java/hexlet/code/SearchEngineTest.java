@@ -42,10 +42,12 @@ class SearchEngineTest {
     }
 
     @Test
-    void searchWithEmptyDocTest() {
-        List<String> result = SearchEngine.search(new ArrayList<>(), "shoot");
+    void searchWithEmptyTest() {
+        List<String> result1 = SearchEngine.search(new ArrayList<>(), "shoot");
+        List<String> result2 = SearchEngine.search(docs, "");
 
-        assertThat(result).isNullOrEmpty();
+        assertThat(result1).isNull();
+        assertThat(result2).isNull();
     }
 
     @Test
