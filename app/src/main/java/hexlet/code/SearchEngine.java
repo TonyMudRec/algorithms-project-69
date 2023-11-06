@@ -13,7 +13,7 @@ public class SearchEngine {
 
     public static List<String> search(List<Map<String, String>> docs, String target) {
         if (docs == null || docs.isEmpty() || target == null || target.isEmpty()) {
-            return null;
+            return new ArrayList<>();
         }
 
         return getResultOfSearch(docs, target);
@@ -29,7 +29,7 @@ public class SearchEngine {
         var partsOfTarget = target.trim().split(" ");
 
         if (partsOfTarget.length == 1) {
-            return getIndexMap(docs).get(target);
+            return getIndexMap(docs).getOrDefault(target, new ArrayList<>());
         }
 
         LinkedList<List<String>> listOfResults = new LinkedList<>();
@@ -41,7 +41,7 @@ public class SearchEngine {
             }
         }
 
-        return listOfResults.isEmpty() ? null : getResultList(listOfResults);
+        return listOfResults.isEmpty() ? new ArrayList<>() : getResultList(listOfResults);
     }
 
     private static List<String> getResultList(LinkedList<List<String>> listOfResults) {

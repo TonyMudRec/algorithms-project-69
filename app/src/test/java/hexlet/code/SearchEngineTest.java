@@ -45,9 +45,13 @@ class SearchEngineTest {
     void searchWithEmptyTest() {
         List<String> result1 = SearchEngine.search(new ArrayList<>(), "shoot");
         List<String> result2 = SearchEngine.search(docs, "");
+        List<String> result3 = SearchEngine.search(docs, "qwerty");
+        List<String> result4 = SearchEngine.search(docs, "   qwerty   trewq");
 
-        assertThat(result1).isNull();
-        assertThat(result2).isNull();
+        assertThat(result1).isEmpty();
+        assertThat(result2).isEmpty();
+        assertThat(result3).isEmpty();
+        assertThat(result4).isEmpty();
     }
 
     @Test
