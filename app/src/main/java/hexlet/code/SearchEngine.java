@@ -12,7 +12,7 @@ public class SearchEngine {
     private static HashSet<String> allWords;
 
     public static List<String> search(List<Map<String, String>> docs, String target) {
-        if (docs.isEmpty()) {
+        if (docs == null || docs.isEmpty() || target == null) {
             return new ArrayList<>();
         }
 
