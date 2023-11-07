@@ -33,41 +33,27 @@ public class SearchEngine {
         }
 
         LinkedList<List<String>> listOfResults = new LinkedList<>();
-
-        for (var targetPart : partsOfTarget) {
-            var tmp = getIndexMap(docs).get(targetPart);
-            if (tmp != null && !tmp.isEmpty()) {
+        var indexOfBiggestList = 0;
+        var biggestSize = 0;
+        for (int i = 0; i < partsOfTarget.length; i++) {
+            var targetPart = partsOfTarget[i];
+            var tmp = getIndexMap(docs).getOrDefault(targetPart, new ArrayList<>());
+//            if (tmp != null && !tmp.isEmpty()) {
+                if (biggestSize < tmp.size()) {
+                    indexOfBiggestList = i;
+                    biggestSize = tmp.size();
+                }
                 listOfResults.add(tmp);
-            }
+//            }
         }
 
-        return listOfResults.isEmpty() ? new ArrayList<>() : getResultList(listOfResults);
+        return listOfResults.isEmpty() ? new ArrayList<>() : getResultList(listOfResults, indexOfBiggestList);
     }
 
-    private static List<String> getResultList(LinkedList<List<String>> listOfResults) {
-        var maxListSize = 0;
-        var biggestListIndex = 0;
-        for (int i = 0; i < listOfResults.size(); i++) {
-            var partOfResult = listOfResults.get(i);
-            if (maxListSize < partOfResult.size()) {
-                biggestListIndex = i;
-                maxListSize = partOfResult.size();
-            }
-        }
-
-        List<String> result = new ArrayList<>();
-        LinkedList<String> tmp = new LinkedList<>(listOfResults.get(biggestListIndex));
-        for (var docName : tmp) {
-            var isContains = true;
-            for (var partOfResult : listOfResults) {
-                if (!partOfResult.contains(docName)) {
-                    isContains = false;
-                    break;
-                }
-            }
-            if (isContains) {
-                result.add(docName);
-            }
+    private static List<String> getResultList(LinkedList<List<String>> listOfResults, int indexOfBiggestList) {
+        List<String> result = new LinkedList<>(listOfResults.get(indexOfBiggestList));
+        for (var oneWordResultList : listOfResults) {
+            result.retainAll(oneWordResultList);
         }
 
         return result;
