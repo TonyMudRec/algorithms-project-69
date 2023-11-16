@@ -40,17 +40,19 @@ public class SearchEngine {
     private static List<String> getCalculatedResult(String[] targets, List<Map<String, String>> docs) {
         var resultSortedMap = new TreeMap<Double, String>(Comparator.reverseOrder());
         for (String target : targets) {
-            for (Map<String, Double> docMap : getAllWordsTFList(docs)) {
+            for (int i = 0; i < docs.size(); i++) {
+                var docMap = getAllWordsTFList(docs).get(i);
                 if (docMap.containsKey(target)) {
+                    var docName = docs.get(i).get("id");
                     resultSortedMap.put(
                             getTFIDF(docs.size(),
                                     getIndexMap(docs).get(target).size(),
                                     docMap.get(target)),
-                            target);
+                            docName);
                 }
             }
         }
-        return resultSortedMap.values().stream().toList();
+        return resultSortedMap.values().stream().distinct().toList();
     }
 
 
@@ -63,6 +65,10 @@ public class SearchEngine {
     }
 
     public static List<Map<String, Double>> getAllWordsTFList(List<Map<String, String>> docs) {
+        if (allWordsTFList != null) {
+            return allWordsTFList;
+        }
+
         allWordsTFList = new LinkedList<>();
 
         for (var doc : docs) {
@@ -73,7 +79,8 @@ public class SearchEngine {
             for (var word : words) {
                 word = wordConvert(word);
                 var tf = docMap.getOrDefault(word, 0.0);
-                docMap.put(word, tf + (1 / size));
+                double oneWordTf = ((double) 1 / size);
+                docMap.put(word, tf + oneWordTf);
             }
 
             allWordsTFList.add(docMap);
