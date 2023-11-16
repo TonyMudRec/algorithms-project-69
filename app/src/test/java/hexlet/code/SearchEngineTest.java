@@ -32,13 +32,10 @@ class SearchEngineTest {
 
     @Test
     void searchMultipleWordsTest() {
-        List<String> result1 = SearchEngine.search(docs, "shoot me");
-        List<String> correct1 = List.of("doc4", "doc2", "doc1");
-        List<String> result2 = SearchEngine.search(docs, "shoot at me");
-        List<String> correct2 = List.of("doc2");
+        List<String> result = SearchEngine.search(docs, "shoot me");
+        List<String> correct = List.of("doc4", "doc2", "doc1", "doc3");
 
-        assertThat(result1).isEqualTo(correct1);
-        assertThat(result2).isEqualTo(correct2);
+        assertThat(result).isEqualTo(correct);
     }
 
     @Test
@@ -46,18 +43,16 @@ class SearchEngineTest {
         List<String> result1 = SearchEngine.search(new ArrayList<>(), "shoot");
         List<String> result2 = SearchEngine.search(docs, "");
         List<String> result3 = SearchEngine.search(docs, "qwerty");
-        List<String> result4 = SearchEngine.search(docs, "   qwerty   shoot");
 
         assertThat(result1).isEmpty();
         assertThat(result2).isEmpty();
         assertThat(result3).isEmpty();
-        assertThat(result4).isEmpty();
     }
 
     @Test
     void searchWithRelevanceOrder() {
-        List<String> result = SearchEngine.search(docs, "shoot");
-        List<String> correct = List.of("doc4", "doc2", "doc1");
+        List<String> result = SearchEngine.search(docs, "me");
+        List<String> correct = List.of("doc4", "doc3", "doc2", "doc1");
 
         assertThat(result).isEqualTo(correct);
     }

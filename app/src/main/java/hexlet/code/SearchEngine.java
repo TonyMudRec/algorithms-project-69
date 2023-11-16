@@ -1,6 +1,12 @@
 package hexlet.code;
 
-import java.util.*;
+import java.util.List;
+import java.util.LinkedList;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.TreeMap;
+import java.util.Comparator;
 import java.util.regex.MatchResult;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -8,15 +14,21 @@ import java.util.stream.Collectors;
 public class SearchEngine {
 
     private static Map<String, List<String>> indexMap;
+    private static List<Map<String, Double>> allWordsTFList;
 
-    private static HashSet<String> allWords;
 
     public static List<String> search(List<Map<String, String>> docs, String target) {
         if (docs == null || docs.isEmpty() || target == null || target.isEmpty()) {
             return new ArrayList<>();
         }
 
-        return getResultOfSearch(docs, target);
+        var targetArr = target.trim().split(" ");
+
+        if (targetArr.length == 1) {
+            return getIndexMap(docs).getOrDefault(targetArr[0], new ArrayList<>());
+        }
+
+        return getCalculatedResult(targetArr, docs);
     }
 
 
@@ -25,38 +37,20 @@ public class SearchEngine {
         return idf * tf;
     }
 
-    public static List<String> getResultOfSearch(List<Map<String, String>> docs, String target) {
-        var partsOfTarget = target.trim().split(" ");
-
-        if (partsOfTarget.length == 1) {
-            return getIndexMap(docs).getOrDefault(target, new ArrayList<>());
-        }
-
-        LinkedList<List<String>> listOfResults = new LinkedList<>();
-        var indexOfBiggestList = 0;
-        var biggestSize = 0;
-        for (int i = 0; i < partsOfTarget.length; i++) {
-            var targetPart = partsOfTarget[i];
-            var tmp = getIndexMap(docs).getOrDefault(targetPart, new ArrayList<>());
-//            if (tmp != null && !tmp.isEmpty()) {
-                if (biggestSize < tmp.size()) {
-                    indexOfBiggestList = i;
-                    biggestSize = tmp.size();
+    private static List<String> getCalculatedResult(String[] targets, List<Map<String, String>> docs) {
+        var resultSortedMap = new TreeMap<Double, String>(Comparator.reverseOrder());
+        for (String target : targets) {
+            for (Map<String, Double> docMap : getAllWordsTFList(docs)) {
+                if (docMap.containsKey(target)) {
+                    resultSortedMap.put(
+                            getTFIDF(docs.size(),
+                                    getIndexMap(docs).get(target).size(),
+                                    docMap.get(target)),
+                            target);
                 }
-                listOfResults.add(tmp);
-//            }
+            }
         }
-
-        return listOfResults.isEmpty() ? new ArrayList<>() : getResultList(listOfResults, indexOfBiggestList);
-    }
-
-    private static List<String> getResultList(LinkedList<List<String>> listOfResults, int indexOfBiggestList) {
-        List<String> result = new LinkedList<>(listOfResults.get(indexOfBiggestList));
-        for (var oneWordResultList : listOfResults) {
-            result.retainAll(oneWordResultList);
-        }
-
-        return result;
+        return resultSortedMap.values().stream().toList();
     }
 
 
@@ -68,59 +62,35 @@ public class SearchEngine {
                 .collect(Collectors.joining());
     }
 
-    public static List<HashMap<String, Double>> getTFList(List<Map<String, String>> docs) {
-        allWords = new HashSet<>();
-        List<HashMap<String, Double>> result = new ArrayList<>();
+    public static List<Map<String, Double>> getAllWordsTFList(List<Map<String, String>> docs) {
+        allWordsTFList = new LinkedList<>();
+
         for (var doc : docs) {
+            Map<String, Double> docMap = new HashMap<>();
             var words = doc.get("text").trim().split(" ");
-            HashMap<String, Double> tmpMap = new HashMap<>();
             var size = words.length;
+
             for (var word : words) {
                 word = wordConvert(word);
-                allWords.add(word);
-                if (!tmpMap.containsKey(word)) {
-                    tmpMap.put(word, 1.0);
-                } else {
-                    var count = tmpMap.get(word);
-                    tmpMap.put(word, ++count);
-                }
+                var tf = docMap.getOrDefault(word, 0.0);
+                docMap.put(word, tf + (1 / size));
             }
-            for (Map.Entry<String, Double> entry : tmpMap.entrySet()) {
-                entry.setValue(entry.getValue() / size);
-            }
-            result.add(tmpMap);
+
+            allWordsTFList.add(docMap);
         }
-        return result;
+
+        return allWordsTFList;
     }
 
-    public static List<String> getListOfRelevance(String word, List<HashMap<String, Double>> listOfUsages, List<Map<String, String>> docs) {
-        List<String> result = new ArrayList<>();
-        var allDocsSize = docs.size();
-        for (int i = 0; i < allDocsSize; i++) {
-            var usagesMap = listOfUsages.get(i);
-            var docName = docs.get(i).get("id");
-            if (usagesMap.containsKey(word)) {
-                result.add(docName);
+    public static List<String> getListOfRelevance(String word, List<Map<String, String>> docs) {
+        var resultSortedMap = new TreeMap<Double, String>(Comparator.reverseOrder());
+        for (int i = 0; i < allWordsTFList.size(); i++) {
+            if (allWordsTFList.get(i).containsKey(word)) {
+                resultSortedMap.put(allWordsTFList.get(i).get(word), docs.get(i).get("id"));
             }
         }
 
-        var resultSize = result.size();
-        if (resultSize < 2) {
-            return result;
-        }
-
-        NavigableMap<Double, String> treemap = new TreeMap<>(Collections.reverseOrder());
-
-        for (int i = 0; i < allDocsSize; i++) {
-            var docName = docs.get(i).get("id");
-            if (result.contains(docName)) {
-                var tfidf = getTFIDF(allDocsSize, resultSize, listOfUsages.get(i).getOrDefault(word, 0.0));
-                treemap.put(tfidf, docName);
-            }
-        }
-        result.clear();
-        result.addAll(treemap.values());
-        return result;
+        return resultSortedMap.values().stream().toList();
     }
 
     public static Map<String, List<String>> getIndexMap(List<Map<String, String>> docs) {
@@ -128,14 +98,13 @@ public class SearchEngine {
             return indexMap;
         }
 
-        var tfList = getTFList(docs);
-        Map<String, List<String>> result = new HashMap<>();
-        for (var word : allWords) {
-            var relevance = getListOfRelevance(word, tfList, docs);
-            result.put(word, relevance);
+        indexMap = new HashMap<>();
+        for (Map<String, Double> tfMap : getAllWordsTFList(docs)) {
+            for (var word : tfMap.keySet()) {
+                indexMap.put(word, getListOfRelevance(word, docs));
+            }
         }
 
-        indexMap = result;
         return indexMap;
     }
 }
